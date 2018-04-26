@@ -12,7 +12,6 @@ import org.molgenis.calibratecadd.support.JudgedVariant.ExpertClassification;
 import org.molgenis.data.Entity;
 
 import org.molgenis.data.annotation.entity.impl.gavin.GavinAlgorithm;
-import org.molgenis.data.annotation.entity.impl.gavin.GavinAnnotator;
 import org.molgenis.data.annotation.entity.impl.gavin.GavinEntry;
 import org.molgenis.data.annotation.entity.impl.gavin.Judgment;
 import org.molgenis.data.annotation.entity.impl.snpEff.Impact;
@@ -20,6 +19,7 @@ import org.molgenis.data.vcf.VcfRepository;
 
 import org.molgenis.data.annotation.entity.impl.gavin.Judgment.Classification;
 import org.molgenis.data.annotation.entity.impl.gavin.Judgment.Method;
+import org.molgenis.gavin2.g3.G3Classify;
 
 /**
 * Assess the performance of an in silico variant pathogenicity prediction tool on gold standard datasets.
@@ -36,7 +36,7 @@ import org.molgenis.data.annotation.entity.impl.gavin.Judgment.Method;
 public class Benchmark
 {
 	public enum ToolNames{
-		GAVIN, GAVINnocal, PONP2, CADD_Thr15, CADD_Thr20, CADD_Thr25, PROVEAN, SIFT, PolyPhen2, MSC_ClinVar95CI, MSC_HGMD99CI, Condel, PredictSNP2, FATHMM, GWAVA, FunSeq, DANN
+		GAVIN, GAVIN3, GAVINnocal, PONP2, CADD_Thr15, CADD_Thr20, CADD_Thr25, PROVEAN, SIFT, PolyPhen2, MSC_ClinVar95CI, MSC_HGMD99CI, Condel, PredictSNP2, FATHMM, GWAVA, FunSeq, DANN
 	}
 	
 	public static void main(String[] args) throws Exception
@@ -46,7 +46,7 @@ public class Benchmark
 			throw new Exception("please provide: path of predictions (e.g. ~/github/gavin/data/predictions), your variant vcf, tool name, output file, version [e.g. 'r0.2']");
 		}
 		new File(args[3]).createNewFile();
-		new Benchmark(args[0], args[1], args[2], args[3], args[4]);
+		new Benchmark(args[0], args[1], args[2], args[3], args[4], (args.length>5?args[5]:null));
 	}
 
 	HashMap<String, GavinEntry> gavinData;
@@ -58,7 +58,7 @@ public class Benchmark
 	 * Benchmark the performance of a prediction tool
 	 * @throws Exception 
 	 */
-	public Benchmark(String predictionToolPath, String mvlLoc, String mode, String outFile, String version) throws Exception
+	public Benchmark(String predictionToolPath, String mvlLoc, String mode, String outFile, String version, String restrictToChr) throws Exception
 	{
 		if(!EnumUtils.isValidEnum(ToolNames.class, mode))
 		{
@@ -71,11 +71,11 @@ public class Benchmark
 		}
 		this.gavinData = loadGAVIN(predictionToolPath + File.separatorChar + "GAVIN_calibrations_"+version+".tsv").getGeneToEntry();
 		this.gavin = new GavinAlgorithm();
-		scanMVL(mvlFile, predictionToolPath, ToolNames.valueOf(mode));
+		scanMVL(mvlFile, predictionToolPath, ToolNames.valueOf(mode), restrictToChr);
 		ProcessJudgedVariantMVLResults.printResults(judgedMVLVariants, mode, mvlFile.getName(), judgmentsInCalibratedGenes, outFile);
 	}
 	
-	public void scanMVL(File mvlFile, String predictionToolPath, ToolNames mode) throws Exception
+	public void scanMVL(File mvlFile, String predictionToolPath, ToolNames mode, String restrictToChr) throws Exception
 	{
 		
 		VcfRepository vcfRepo = new VcfRepository(mvlFile, "mvl");
@@ -94,9 +94,14 @@ public class Benchmark
 		MSCResults mscr = null;
 		CondelResults condelr = null;
 		PredictSNP2Results predictSNP2r = null;
+		G3Classify g3c = null;
 		if (mode.equals(ToolNames.PONP2))
 		{
 			p2r = new PONP2Results(new File(predictionToolPath, "PON-P2.tsv"));
+		}
+		if (mode.equals(ToolNames.GAVIN3))
+		{
+			g3c = new G3Classify(new File("/Users/joeri/github/g3files/calculon/gavin3result_w15.tsv.gz"), 2);
 		}
 		if (mode.equals(ToolNames.PROVEAN) || mode.equals(ToolNames.SIFT))
 		{
@@ -130,6 +135,13 @@ public class Benchmark
 			Entity record = vcfRepoIter.next();
 			
 			String chr = record.getString("#CHROM");
+
+			// skip variants that are not in the selected chromosome
+			if(restrictToChr != null && !chr.equals(restrictToChr))
+			{
+				continue;
+			}
+
 			String pos = record.getString("POS");
 			String ref = record.getString("REF");
 			String alt = record.getString("ALT");
@@ -169,6 +181,17 @@ public class Benchmark
 					if (mode.equals(ToolNames.GAVIN))
 					{
 						judgment = gavin.classifyVariant(impact, CADDscore, MAF, gene, null, this.gavinData);
+					}
+					else if(mode.equals(ToolNames.GAVIN3))
+					{
+						if(CADDscore != null){
+							String clfs = g3c.classifyVariant(chr, pos, CADDscore);
+							judgment = new Judgment(Classification.valueOf(clfs), Method.genomewide, "Gene not required", "GAVIN3");
+						}else
+						{
+							judgment = new Judgment(Classification.VOUS, Method.genomewide, gene, "CADD score not available");
+
+						}
 					}
 					else if(mode.equals(ToolNames.GAVINnocal))
 					{

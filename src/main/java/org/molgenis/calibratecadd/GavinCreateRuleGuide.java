@@ -1,6 +1,5 @@
 package org.molgenis.calibratecadd;
 
-import org.molgenis.calibratecadd.support.GavinUtils;
 import org.molgenis.data.annotation.entity.impl.gavin.GavinAlgorithm;
 import org.molgenis.data.annotation.entity.impl.gavin.GavinEntry;
 import org.molgenis.data.annotation.entity.impl.gavin.GavinEntry.Category;
