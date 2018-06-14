@@ -15,12 +15,12 @@ public class Step8_FullBenchmark
 		//paper submitted: r0.1 (using clinvar: 5 nov 2015). after revision: r0.2, using the same clinvar data but snpeff-annotated ExAC
 		//r0.3 (using clinvar: 1 sep 2016)
 		//latest: r0.4 (gnomad 2.0.1, clinvar may 11th 2015)
-		String version = "r0.4";
+		String version = "r0.5";
 		String outFile = "/Users/joeri/github/gavin/data/other/step9_panels_out_"+version+".R";
 		String path = "/Users/joeri/github/gavin/data/predictions";
 		List<String> datasets = Arrays.asList(new String[]{"Renal", "Pulmonary", "Ophthalmologic", "Oncologic", "Obstetric", "NotInCGD", "Neurologic", "Musculoskeletal", "Hematologic", "Genitourinary", "Gastrointestinal", "Endocrine", "Dermatologic", "Dental", "Craniofacial", "Cardiovascular", "Biochemical", "Audiologic_Otolaryngologic", "Allergy_Immunology_Infectious"});
 	//	List<String> tools = Arrays.asList(new String[]{"GAVIN2"});
-		List<String> tools = Arrays.asList(new String[]{"GAVIN", "GAVIN2", "CADD_Thr15", "CADD_Thr20", "CADD_Thr25", "MSC_ClinVar95CI", "MSC_HGMD99CI", "PROVEAN", "SIFT", "PolyPhen2", "Condel", "PONP2", "PredictSNP2", "FATHMM", "GWAVA", "FunSeq", "DANN"});
+		List<String> tools = Arrays.asList(new String[]{"GAVIN", "CADD_Thr15", "CADD_Thr20", "CADD_Thr25", "MSC_ClinVar95CI", "MSC_HGMD99CI", "PROVEAN", "SIFT", "PolyPhen2", "Condel", "PONP2", "PredictSNP2", "FATHMM", "GWAVA", "FunSeq", "DANN"});
 
 		if(new File(outFile).exists())
 		{
