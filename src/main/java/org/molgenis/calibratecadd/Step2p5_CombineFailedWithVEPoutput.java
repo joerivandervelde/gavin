@@ -14,8 +14,8 @@ public class Step2p5_CombineFailedWithVEPoutput
 
 
 	/**
-	 * argg0 : VDF downloaded output from Ensembl VEP (http://grch37.ensembl.org/Homo_sapiens/Tools/VEP) on HGVS notation of the variants that failed (manually taken from clinvar.patho.fix.vcffailed)
-	 * arg1 : the variants from Step 2 that failed (e.g. clinvar.patho.fix.vcffailed, original file)
+	 * args[0] : VCF downloaded output from Ensembl VEP (http://grch37.ensembl.org/Homo_sapiens/Tools/VEP) on HGVS notation of the variants that failed (manually taken from clinvar.patho.fix.vcffailed of Step2)
+	 * args[1] : the variants from Step 2 that failed (e.g. clinvar.patho.fix.vcffailed, original file)
 	 * @param args
 	 * @throws Exception
      */
