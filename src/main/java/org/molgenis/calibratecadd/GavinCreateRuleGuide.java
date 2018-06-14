@@ -46,6 +46,13 @@ public class GavinCreateRuleGuide {
         String sep = "\t";
         String NA = "n/a";
 
+        double GENOMEWIDE_MAF_THRESHOLD = -1;
+        if(version.equals("r0.1")) { GENOMEWIDE_MAF_THRESHOLD = GavinAlgorithm.GENOMEWIDE_MAF_THRESHOLD_r0_1; }
+        if(version.equals("r0.2")) { GENOMEWIDE_MAF_THRESHOLD = GavinAlgorithm.GENOMEWIDE_MAF_THRESHOLD_r0_2; }
+        if(version.equals("r0.3")) { GENOMEWIDE_MAF_THRESHOLD = GavinAlgorithm.GENOMEWIDE_MAF_THRESHOLD_r0_3; }
+        if(version.equals("r0.4")) { GENOMEWIDE_MAF_THRESHOLD = GavinAlgorithm.GENOMEWIDE_MAF_THRESHOLD_r0_4; }
+        if(version.equals("r0.5")) { GENOMEWIDE_MAF_THRESHOLD = GavinAlgorithm.GENOMEWIDE_MAF_THRESHOLD_r0_5; }
+
         pw.println("################################");
         pw.println("## GAVIN Applied Rule Guide " + version);
         pw.println("################################");
@@ -58,7 +65,7 @@ public class GavinCreateRuleGuide {
         pw.println("## Genome-wide rules are used if the gene-specific rules fail to classify.");
         pw.println("## These rules are applied as follows:");
         pw.println("## 1) If impact equals MODIFIER -> benign,");
-        pw.println("## 2) if MAF greater than " + GavinAlgorithm.GENOMEWIDE_MAF_THRESHOLD + " -> benign,");
+        pw.println("## 2) if MAF greater than " + GENOMEWIDE_MAF_THRESHOLD + " -> benign,");
         pw.println("## 3) if CADD greater than "+GavinAlgorithm.GENOMEWIDE_CADD_THRESHOLD+" -> pathogenic,");
         pw.println("## 4) if CADD less than "+GavinAlgorithm.GENOMEWIDE_CADD_THRESHOLD+" -> benign.");
         pw.println("## ");
@@ -110,7 +117,7 @@ public class GavinCreateRuleGuide {
                 case T1: case T2:
                     pw.println(gene + sep + NA + sep + NA + sep + pathoMAFThreshold + sep + NA + sep + category);
                     break;
-                case N1: case N2:
+                case N1: case N2: case N3:
                     pw.println(gene + sep + NA + sep + NA + sep + NA + sep + NA + sep + category);
                     break;
 
