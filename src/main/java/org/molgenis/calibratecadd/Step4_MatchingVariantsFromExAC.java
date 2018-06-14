@@ -258,23 +258,33 @@ public class Step4_MatchingVariantsFromExAC {
 				continue;
 			}
 
-			if (record.getString(Step1_GetClinVarPathogenic.CLINVAR_INFO) == null)
+			if (record.getString(Step1_GetClinVarPathogenic.CLINVAR_INFO) == null && record.getString(Step1_GetClinVarPathogenic.VKGL_INFO) == null)
 			{
 				vcfRepo.close();
 				throw new Exception("Did you create this VCF running Step1? " + Step1_GetClinVarPathogenic.CLINVAR_INFO
-						+ " field not found for " + record.toString());
+						+ " or " + Step1_GetClinVarPathogenic.VKGL_INFO + "field not found for " + record.toString());
 			}
 
-			String geneAccordingToClinVar = record.getString(Step1_GetClinVarPathogenic.CLINVAR_INFO).split("\\|", -1)[1];
+			String geneAccordingToClinVarOrVKGL = null;
+
+			if (record.getString(Step1_GetClinVarPathogenic.CLINVAR_INFO) != null)
+			{
+				geneAccordingToClinVarOrVKGL = record.getString(Step1_GetClinVarPathogenic.CLINVAR_INFO).split("\\|", -1)[1];
+			}
+			if (record.getString(Step1_GetClinVarPathogenic.VKGL_INFO) != null)
+			{
+				geneAccordingToClinVarOrVKGL = record.getString(Step1_GetClinVarPathogenic.VKGL_INFO).split(":", -1)[0];
+			}
 
 			//sanity check
-			if(geneAccordingToClinVar.length() == 0)
+			if(geneAccordingToClinVarOrVKGL.length() == 0)
 			{
 				vcfRepo.close();
 				throw new Exception("geneAccordingToClinVar length 0");
 			}
 
 			Set<String> genesAccordingToSnpEff = GavinUtils.getGenesFromAnn(record.getString("ANN"));
+			//TODO: require the gene to match clinvar/VKGL annotation?
 			for(String snpEffGene : genesAccordingToSnpEff)
 			{
 				if(!snpEffGene.isEmpty()) {
