@@ -1,12 +1,11 @@
 package org.molgenis.calibratecadd;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
+import java.util.zip.GZIPInputStream;
 
 import org.molgenis.calibratecadd.support.ClinVarVariant;
 
@@ -19,7 +18,9 @@ public class Step1_GetClinVarPathogenic
 	 * E:\Data\clinvarcadd\clinvar.patho.vcf
 	 */
 	public static String CLINVAR_INFO = "CLINVAR";
-	
+	public static String VKGL_INFO = "VKGL";
+
+
 	// download @ ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/variant_summary.txt.gz
 	public static void main(String[] args) throws Exception
 	{
@@ -32,7 +33,7 @@ public class Step1_GetClinVarPathogenic
 		{
 			pw.println("##contig=<ID="+chr+">");
 		}
-		pw.println("##INFO=<ID="+CLINVAR_INFO+",Number=1,Type=String,Description=\"ClinVar\">");
+		pw.println("##INFO=<ID="+CLINVAR_INFO+",Number=1,Type=String,Description=\"Variant classification according to ClinVar database\">");
 		pw.println("#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO");
 		
 		for(String gene : cvv.keySet())
@@ -53,7 +54,10 @@ public class Step1_GetClinVarPathogenic
 		System.out.println("loading clinvar..");
 		HashMap<String, List<ClinVarVariant>> res = new HashMap<String, List<ClinVarVariant>>();
 
-		Scanner s = new Scanner(clinvarFile);
+	//	Scanner s = new Scanner(clinvarFile);
+
+		GZIPInputStream gzip = new GZIPInputStream(new FileInputStream(clinvarFile));
+		BufferedReader s = new BufferedReader(new InputStreamReader(gzip));
 
 		String line = null;
 
@@ -61,21 +65,21 @@ public class Step1_GetClinVarPathogenic
 		int totalvariants = 0;
 
 		//skip header
-		line = s.nextLine();
+		line = s.readLine();
 
-		while (s.hasNextLine())
+		while (true)
 		{
-			line = s.nextLine();
+			line = s.readLine();
+			if(line == null ) { break; }
+
 			String[] lineSplit = line.split("\t", -1);
 
-			// needs to be GRCh37
+			// needs to be GRCh37, also sanity check other options
 			String genomeBuild = lineSplit[16];
-
 			if (!genomeBuild.equals("GRCh37") && !genomeBuild.equals("GRCh38") && !genomeBuild.equals("NCBI36") && !genomeBuild.equals(""))
 			{
 				throw new Exception("bad genome build: " + genomeBuild);
 			}
-
 			if (!genomeBuild.equals("GRCh37"))
 			{
 				continue;
@@ -83,7 +87,14 @@ public class Step1_GetClinVarPathogenic
 
 			// needs to contain 'pathogenic'
 			String clinsig = lineSplit[6];
+		//	System.out.println(clinsig);
 			if (!clinsig.toLowerCase().contains("pathogenic"))
+			{
+				continue;
+			}
+
+			//but not 'conflicting' or 'GRCh38/hg38'
+			if (clinsig.toLowerCase().contains("conflicting") || clinsig.contains("GRCh38/hg38"))
 			{
 				continue;
 			}
@@ -103,23 +114,41 @@ public class Step1_GetClinVarPathogenic
 
 			if (gene.equals("-") || gene.equals(""))
 			{
-				if(gene.equals("")) { System.out.println("override: '"+gene+"' to '"+geneFromName+"'"); }
+				if(gene.equals("")) { System.out.println("empty gene, override: '"+gene+"' to '"+geneFromName+"'"); }
 				gene = geneFromName;
 			}
 
 			if (gene == null)
 			{
 				lost++;
+				System.out.println("lost due to no gene symbol: " + line);
 				continue;
 			}
 
 			String chrom = lineSplit[18];
 			String pos = lineSplit[19];
-			String id = lineSplit[9];
+			String rsid = lineSplit[9];
 			String ref = lineSplit[21];
 			String alt = lineSplit[22];
 
-			ClinVarVariant cvv = new ClinVarVariant(chrom, pos, id, ref, alt, name, gene, clinsig);
+			// no RS id and no ref/alt notation means we have no way to fix this variant
+			if(rsid.equals("-1") && ref.equals("na") && alt.equals("na"))
+			{
+				lost++;
+			//	System.out.println("lost due to -1 na na: " + line);
+				continue;
+			}
+
+			//replace 'na' by '-' to make it easier later
+			if(ref.equals("na"))
+			{
+				ref = "-";
+			}
+			if(alt.equals("na"))
+			{
+				alt = "-";
+			}
+			ClinVarVariant cvv = new ClinVarVariant(chrom, pos, rsid, ref, alt, name, gene, clinsig);
 			
 			if(res.containsKey(gene))
 			{
@@ -138,7 +167,7 @@ public class Step1_GetClinVarPathogenic
 		
 		s.close();
 
-		System.out.println("..done, put " + totalvariants + " 'pathogenic' variants in " + res.size() + " genes, lost " + lost + " due to non-recoverable gene symbols");
+		System.out.println("..done, put " + totalvariants + " 'pathogenic' variants in " + res.size() + " genes, lost due to no gene symbol/bad data:" + lost);
 		
 		return res;
 
