@@ -2,7 +2,7 @@
 # Performance benchmark result processing and plotting
 ######################################################
 
-version <- "r0.4"
+version <- "r0.5"
 pathToGavinGitRepo <- "/Users/joeri/github/gavin"
 
 library(ggplot2)
@@ -52,6 +52,7 @@ stats
 df.notincgd <- subset(df, Data == "NotInCGD")
 ggplot() +
   theme_bw() + theme(panel.grid.major = element_line(colour = "black"), axis.text=element_text(size=12),  axis.title=element_text(size=14,face="bold")) +
+  # cleaner look: theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text=element_text(size=12),  axis.title=element_text(size=14,face="plain")) +
   geom_point(data = df, aes(x = Sensitivity, y = Specificity, shape = Tool, colour = Tool), size=3, stroke = 3, alpha=0.75) +
   geom_text(data = df, aes(x = Sensitivity, y = Specificity, label = Data), hjust = 0, nudge_x = 0.01, size = 3, check_overlap = TRUE) +
   geom_text(data = df.notincgd , aes(x = Sensitivity, y = Specificity, label = Data), hjust = 0, nudge_x = 0.01, size = 3, colour="red",check_overlap = TRUE) +
@@ -84,9 +85,6 @@ mean(calibrations$MeanPathogenicCADDScore, na.rm = T)
 mean(calibrations$MeanDifference, na.rm = T)
 sd(calibrations$MeanDifference, na.rm = T)
 table(calibrations$Category)
-
-#calibrations <- read.table(paste(pathToGavinGitRepo,"/data/predictions/GAVIN_calibrations_r0.4.tsv",sep=""),header=TRUE,sep='\t',quote="",comment.char="",as.is=TRUE)
-#table(calibrations$Category)
 
 # Some plots/stats on the variants used in calibration
 variants <- read.table(gzfile(paste(pathToGavinGitRepo,"/data/other/calibrationvariants_",version,".tsv.gz",sep="")), sep="\t", header=T)
@@ -156,12 +154,12 @@ for (selectGene in unique(rules$Gene)) {
       ) + 
       labs(title=paste("GAVIN ", version, ". Thresholds for ", selectGene, ": pathogenic > ", rules.selectedGene$PathogenicIfCADDScoreGreaterThan, ", benign < ", rules.selectedGene$BenignIfCADDScoreLessThan, "\nMAF benign > ",rules.selectedGene$BenignIfMAFGreaterThan,", cat: ",rules.selectedGene$CalibrationCategory,"\nred: ClinVar pathogenic variants, blue: rarity & impact matched gnomAD\nvariants, green: RefSeq exons, grey: genome-wide fallback threshold", sep="")) +
       ylab("CADD scaled C-score") +
-      xlab(paste("Genomic position [",selectGene,", chr. ",sort(unique(variants.selectedGene$chr)),"]", sep="")) +
+      xlab(paste("Genomic position [",selectGene,", chr. -]", sep="")) +
       theme(legend.position = "none") +
       xlim(0,1) + ylim(0,1)
   }
   #p
-  ggsave(paste("/Users/joeri/Desktop/gavin-r0.4/plots/",selectGene,".png", sep=""), width=8, height=4.5)
+  ggsave(paste("/Users/joeri/Desktop/gavin-r0.5/plots/",selectGene,".png", sep=""), width=8, height=4.5)
 }
 
 ###################################################
@@ -217,13 +215,13 @@ median(C3_calib$Acc)
 median(C3_uncalib$Acc)
 wilcox.test(C3_calib$Acc, C3_uncalib$Acc)
 
-### r0.3 vs r0.4 ###
+### r0.3 vs r0.5 ###
 variantsv3 <- read.table(gzfile(paste(pathToGavinGitRepo,"/data/other/calibrationvariants_r0.3.tsv.gz",sep="")), sep="\t", header=T)
-variantsv4 <- read.table(gzfile(paste(pathToGavinGitRepo,"/data/other/calibrationvariants_r0.4.tsv.gz",sep="")), sep="\t", header=T)
+variantsv5 <- read.table(gzfile(paste(pathToGavinGitRepo,"/data/other/calibrationvariants_r0.5.tsv.gz",sep="")), sep="\t", header=T)
 d3 <- as.data.frame(table(variantsv3$gene))
-d4 <- as.data.frame(table(variantsv4$gene))
+d4 <- as.data.frame(table(variantsv5$gene))
 m <- merge(x = d3, y = d4, by.x = "Var1", by.y = "Var1")
-plot(m$Freq.x,m$Freq.y, log="yx", ylab="GAVIN r0.4", xlab="GAVIN r0.3", title("Variants used per calibrated gene"))
+plot(m$Freq.x,m$Freq.y, log="yx", ylab="GAVIN r0.5", xlab="GAVIN r0.3", title("Variants used per calibrated gene"))
 abline(a = 0, b = 1, col = "red")
 m$abs <- m$Freq.y-m$Freq.x
 m$rel <- m$Freq.y/m$Freq.x
@@ -236,10 +234,12 @@ length(lost)
 #genes with variants  unique to d4
 gained <- d4[which(!(d4$Var1 %in% d3$Var)),]$Var1
 length(gained)
+write.table(lost, file="~/lost.txt", row.names = F, quote=F)
+write.table(gained, file="~/gained.txt", row.names = F, quote=F)
 
-### r0.3 vs r0.4 based on rule guide ### 
+### r0.3 vs r0.5 based on rule guide ### 
 rules3 <- read.table(paste(pathToGavinGitRepo,"/data/predictions/GAVIN_ruleguide_r0.3.tsv",sep=""),header=TRUE,sep='\t',quote="",comment.char="",as.is=TRUE, skip=33)
-rules4 <- read.table(paste(pathToGavinGitRepo,"/data/predictions/GAVIN_ruleguide_r0.4.tsv",sep=""),header=TRUE,sep='\t',quote="",comment.char="",as.is=TRUE, skip=33)
+rules4 <- read.table(paste(pathToGavinGitRepo,"/data/predictions/GAVIN_ruleguide_r0.5.tsv",sep=""),header=TRUE,sep='\t',quote="",comment.char="",as.is=TRUE, skip=33)
 dim(rules3)
 dim(rules4)
 #genes unique to release 3 (incl. no variants)
@@ -249,11 +249,12 @@ length(lost)
 gained <- rules4[which(!(rules4$Gene %in% rules3$Gene)),]$Gene
 length(gained)
 gainedInterestingGenes <- subset(rules4[which(rules4$Gene %in% gained),], CalibrationCategory == "C1")
+write.table(gainedInterestingGenes[,1], file="~/gainedInterestingGenes.txt", row.names = F, quote=F)
 
 ## variant compare ##
 ttn3 <- variantsv3[which(variantsv3$gene=="TTN"),]
-ttn4 <- variantsv4[which(variantsv4$gene=="TTN"),]
-ttnM <- merge(x = ttn3, y = ttn4, by.x = c("chr", "pos", "ref", "alt"), by.y = c("chr", "pos", "ref", "alt"))
+ttn5 <- variantsv5[which(variantsv5$gene=="TTN"),]
+ttnM <- merge(x = ttn3, y = ttn5, by.x = c("chr", "pos", "ref", "alt"), by.y = c("chr", "pos", "ref", "alt"))
 plot(ttnM$cadd.x, ttnM$cadd.y)
 
 ## which in rules but not in refseq?
